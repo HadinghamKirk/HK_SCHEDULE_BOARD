@@ -19,7 +19,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
 .btn.primary:hover{background:#0D47A1}
 .btn.sm{padding:3px 8px;font-size:11px}
 .two-col{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start}
-.key-panel{border:1px solid #ddd;border-radius:8px;background:#fff;position:sticky;top:10px;max-height:95vh;overflow-y:auto}
+.key-panel{border:1px solid #ddd;border-radius:8px;background:#fff;position:sticky;top:58px;max-height:calc(95vh - 58px);overflow-y:auto}
 .key-header{padding:8px 10px;font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #eee;background:#f9f9f9;position:sticky;top:0;z-index:5}
 .key-team{border-bottom:1px solid #eee}
 .key-team-hdr{display:flex;align-items:center;gap:6px;padding:7px 10px}
@@ -124,7 +124,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
 </div>
 
 <!-- Board view -->
-<div id="view-board">
+<div id="view-board" style="padding-top:0.5rem">
   <div class="two-col">
     <div class="key-panel" id="key-panel"></div>
     <div class="gantt-wrap"><div class="gantt-inner" id="gantt"><div class="loading">Connecting to database...</div></div></div>
