@@ -72,6 +72,8 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
 .day-bg.bh{background:#ede7f6}
 .day-bg.tod{background:#fff3e0}
 .day-bg.abs-bg{background:#fafafa}
+.day-bg.clickable{cursor:pointer}
+.day-bg.clickable:hover{filter:brightness(0.92)}
 .bar{position:absolute;top:3px;bottom:3px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;cursor:pointer;user-select:none;overflow:hidden;white-space:nowrap;transition:filter .15s}
 .plant-marker{position:absolute;top:-12px;font-size:15px;pointer-events:none;z-index:5;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
 .bar:hover{filter:brightness(.9)}
@@ -89,30 +91,12 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
 .btn-danger{background:#ffebee;color:#c62828;border-color:#ffcdd2}
 .btn-danger:hover{background:#ffcdd2}
 .loading{display:flex;align-items:center;justify-content:center;height:200px;font-size:14px;color:#999}
-.tab-btns{display:flex;gap:4px;background:#eee;border-radius:6px;padding:3px}
-.tab-btn{padding:5px 14px;border-radius:4px;border:none;background:transparent;font-size:12px;cursor:pointer;color:#666;font-weight:500}
-.tab-btn.active{background:#fff;color:#1565C0;box-shadow:0 1px 3px rgba(0,0,0,.15)}
-.register-wrap{padding:1rem 0}
-.register-search{margin-bottom:1rem}
-.reg-table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #ddd;font-size:12px}
-.reg-table th{background:#263238;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
-.reg-table td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;color:#333}
-.reg-table tr:last-child td{border-bottom:none}
-.reg-table tr:hover td{background:#f5f9ff}
-.reg-table td input,.reg-table td textarea{width:100%;border:1px solid #ddd;border-radius:4px;padding:3px 6px;font-size:11px;font-family:inherit}
-.reg-table td textarea{resize:vertical;min-height:40px}
-.reg-edit-btn{background:none;border:none;cursor:pointer;color:#1565C0;font-size:11px;padding:2px 6px;border-radius:3px}
-.reg-edit-btn:hover{background:#e3f2fd}
 </style>
 </head>
 <body>
 <div class="toolbar">
   <h2>📋 Schedule Board</h2>
   <span class="sync-status sync-saving" id="sync-status">Connecting...</span>
-  <div class="tab-btns">
-    <button class="tab-btn active" id="tab-board" onclick="switchTab('board')">📅 Board</button>
-    <button class="tab-btn" id="tab-register" onclick="switchTab('register')">📁 Project Register</button>
-  </div>
   <button class="btn" id="btn-back" onclick="window.goBack()" title="Show previous month">◀ Back</button>
   <button class="btn" onclick="window.goForward()" id="fwd-btn" title="Go forward" style="display:none">Forward ▶</button>
   <button class="btn" id="btn-today" onclick="monthOffset=0;render()" title="Jump to today">Today</button>
@@ -120,7 +104,6 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
   <button class="btn" onclick="document.getElementById('import-file').click()" title="Restore from a backup file">📂 Restore</button>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="window.importData(event)">
   <button class="btn primary" id="btn-add" onclick="openAddModal()">+ Add project / absence</button>
-  <button class="btn primary" id="btn-add-proj" onclick="openProjectModal()" style="display:none">+ Add project</button>
 </div>
 
 <!-- Board view -->
@@ -128,53 +111,6 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
   <div class="two-col">
     <div class="key-panel" id="key-panel"></div>
     <div class="gantt-wrap"><div class="gantt-inner" id="gantt"><div class="loading">Connecting to database...</div></div></div>
-  </div>
-</div>
-
-<!-- Project Register view -->
-<div id="view-register" style="display:none">
-  <div class="register-wrap">
-    <div class="register-search">
-      <input type="text" id="reg-search" placeholder="Search by ref, name or address..." oninput="renderRegister()" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:300px">
-    </div>
-    <table class="reg-table" id="reg-table">
-      <thead>
-        <tr>
-          <th>Ref</th>
-          <th>Project Name</th>
-          <th>Contact</th>
-          <th>Phone</th>
-          <th>Email</th>
-          <th>Address</th>
-          <th>Works Description</th>
-          <th>Notes</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="reg-body"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Project Register Modal -->
-<div id="proj-modal" style="display:none">
-  <div class="modal-overlay" onclick="closeProjModal(event)">
-    <div class="modal" style="width:420px" onclick="event.stopPropagation()">
-      <h3 id="proj-modal-title">Add project</h3>
-      <div class="form-row"><label>Ref number</label><input id="pf-ref" type="text" placeholder="e.g. RD-26-001"></div>
-      <div class="form-row"><label>Project name</label><input id="pf-name" type="text" placeholder="e.g. 11 Northmoor Road"></div>
-      <div class="form-row"><label>Contact name</label><input id="pf-contact" type="text" placeholder="Client or site contact"></div>
-      <div class="form-row"><label>Phone</label><input id="pf-phone" type="text" placeholder="01234 567890"></div>
-      <div class="form-row"><label>Email</label><input id="pf-email" type="email" placeholder="client@email.com"></div>
-      <div class="form-row"><label>Address</label><input id="pf-address" type="text" placeholder="Site address"></div>
-      <div class="form-row"><label>Description of works</label><textarea id="pf-desc" rows="2" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:5px;font-size:12px;resize:vertical" placeholder="Brief description of the project works"></textarea></div>
-      <div class="form-row"><label>Notes</label><textarea id="pf-notes" rows="2" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:5px;font-size:12px;resize:vertical" placeholder="Any additional notes"></textarea></div>
-      <div class="modal-btns">
-        <button class="btn btn-danger" id="proj-del-btn" onclick="deleteProject()" style="display:none">Delete</button>
-        <button class="btn" onclick="closeProjModal()">Cancel</button>
-        <button class="btn primary" onclick="saveProject()">Save</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -611,6 +547,7 @@ window.addNewTeam=(onBoard)=>{
 
 // ── GANTT ──────────────────────────────────────────────────────────────────
 function render(){
+  const scrollY=window.scrollY;
   const gantt=document.getElementById('gantt');
   gantt.innerHTML='';
   const months=getMonths();
@@ -691,19 +628,21 @@ function render(){
       }).join('');
     }
 
-    function makeDayBgs(extraCls,h){
+    function makeDayBgs(extraCls,h,teamName){
       let s='';
       for(let d=1;d<=days;d++){
         const dd=new Date(year,month,d);
+        const dateStr=ds(dd);
         const we=dd.getDay()===0||dd.getDay()===6,tod=dd.getTime()===today.getTime(),bh=isBH(dd);
-        s+=`<div class="day-bg${extraCls?' '+extraCls:''}${we?' we':''}${bh?' bh':''}${tod?' tod':''}" style="min-height:${h}px"></div>`;
+        const clickAttr=teamName?` onclick="window.openAddModal('${dateStr}','${teamName.replace(/'/g,"\\'")}')"`:'';
+        s+=`<div class="day-bg${extraCls?' '+extraCls:''}${we?' we':''}${bh?' bh':''}${tod?' tod':''}${teamName?' clickable':''}" style="min-height:${h}px"${clickAttr}></div>`;
       }
       return s;
     }
 
     TEAMS.forEach(team=>{
       const bar=lighten(team.color),fc=darkText(team.color);
-      html+=`<div class="board-row" style="grid-template-columns:${gc}"><div class="row-label" style="background:${team.color};color:#fff;min-height:36px">${team.name}</div><div class="days-area" style="grid-column:2/${days+2};display:grid;grid-template-columns:repeat(${days},${DW}px);position:relative">${makeDayBgs('',36)}${entryList.filter(e=>e.rowId===team.name).map(e=>makeBar(e,bar,fc,team.color)).join('')}</div></div>`;
+      html+=`<div class="board-row" style="grid-template-columns:${gc}"><div class="row-label" style="background:${team.color};color:#fff;min-height:36px">${team.name}</div><div class="days-area" style="grid-column:2/${days+2};display:grid;grid-template-columns:repeat(${days},${DW}px);position:relative">${makeDayBgs('',36,team.name)}${entryList.filter(e=>e.rowId===team.name).map(e=>makeBar(e,bar,fc,team.color)).join('')}</div></div>`;
     });
 
     html+=`<div class="divider"></div>`;
@@ -719,6 +658,8 @@ function render(){
     sec.innerHTML=html;
     gantt.appendChild(sec);
   });
+
+  window.scrollTo(0,scrollY);
 }
 
 // ── MODAL ──────────────────────────────────────────────────────────────────
@@ -769,7 +710,7 @@ function toggleModalType(){
   if(isAbs){document.getElementById('f-weeks').value='';updateAbsenceName();}
 }
 
-window.openAddModal=()=>{
+window.openAddModal=(dateStr,teamName)=>{
   editingId=null;
   document.getElementById('modal-title').textContent='Add project or absence';
   document.getElementById('f-type').value='project';
@@ -777,11 +718,12 @@ window.openAddModal=()=>{
   document.getElementById('f-notes').value='';
   document.getElementById('f-weeks').value='';
   document.getElementById('f-weekends').checked=false;
-  populateRowSelect(TEAMS[0]?.name||'');
+  populateRowSelect(teamName||TEAMS[0]?.name||'');
   populatePersonSelect(getAllPeople()[0]?.name||'');
   populateAbsRowSelect('absence-0');
-  document.getElementById('f-start').value=ds(today);
-  document.getElementById('f-end').value=ds(addD(today,6));
+  const startDate=dateStr||ds(today);
+  document.getElementById('f-start').value=startDate;
+  document.getElementById('f-end').value=ds(addD(pd(startDate),6));
   document.getElementById('del-btn').style.display='none';
   toggleModalType();
   document.getElementById('modal').style.display='flex';
@@ -1005,116 +947,6 @@ window.startDrag=(e,id)=>{
 
   document.addEventListener('mousemove',onMove);
   document.addEventListener('mouseup',onUp);
-};
-
-// ── Tab switching ──────────────────────────────────────────────────────────
-window.switchTab=(tab)=>{
-  const isBoard=tab==='board';
-  document.getElementById('view-board').style.display=isBoard?'block':'none';
-  document.getElementById('view-register').style.display=isBoard?'none':'block';
-  document.getElementById('tab-board').classList.toggle('active',isBoard);
-  document.getElementById('tab-register').classList.toggle('active',!isBoard);
-  document.getElementById('btn-back').style.display=isBoard?'':'none';
-  document.getElementById('fwd-btn').style.display=isBoard&&monthOffset<0?'':'none';
-  document.getElementById('btn-today').style.display=isBoard?'':'none';
-document.getElementById('btn-add').style.display=isBoard?'':'none';
-  document.getElementById('btn-add-proj').style.display=isBoard?'none':'';
-  if(!isBoard)renderRegister();
-};
-
-// ── Project Register ───────────────────────────────────────────────────────
-let projects={};
-let editingProjId=null;
-
-onValue(ref(db,'projects'),snap=>{
-  projects=snap.exists()?snap.val():{};
-  renderRegister();
-},err=>console.error(err));
-
-function saveProject_db(proj){
-  setStatus('saving');
-  if(proj.id){
-    update(ref(db,`projects/${proj.id}`),proj).then(()=>setStatus('ok'));
-  } else {
-    const newRef=push(ref(db,'projects'));
-    proj.id=newRef.key;
-    set(newRef,proj).then(()=>setStatus('ok'));
-  }
-}
-function deleteProject_db(id){
-  setStatus('saving');
-  remove(ref(db,`projects/${id}`)).then(()=>setStatus('ok'));
-}
-
-function renderRegister(){
-  const tbody=document.getElementById('reg-body');
-  if(!tbody)return;
-  const search=(document.getElementById('reg-search')?.value||'').toLowerCase();
-  const list=Object.values(projects).filter(p=>{
-    if(!search)return true;
-    return (p.ref||'').toLowerCase().includes(search)||
-           (p.name||'').toLowerCase().includes(search)||
-           (p.address||'').toLowerCase().includes(search)||
-           (p.contact||'').toLowerCase().includes(search);
-  }).sort((a,b)=>(a.ref||'').localeCompare(b.ref||''));
-
-  if(list.length===0){
-    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#aaa;padding:2rem">No projects yet. Click + Add project to get started.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML=list.map(p=>`<tr>
-    <td style="font-weight:600;color:#1565C0;white-space:nowrap">${p.ref||''}</td>
-    <td style="font-weight:500">${p.name||''}</td>
-    <td>${p.contact||''}</td>
-    <td><a href="tel:${p.phone||''}" style="color:#333;text-decoration:none">${p.phone||''}</a></td>
-    <td><a href="mailto:${p.email||''}" style="color:#1565C0">${p.email||''}</a></td>
-    <td>${p.address||''}</td>
-    <td style="max-width:200px">${p.desc||''}</td>
-    <td style="max-width:150px;color:#666;font-style:italic">${p.notes||''}</td>
-    <td><button class="reg-edit-btn" onclick="openProjectModal('${p.id}')">✏️ Edit</button></td>
-  </tr>`).join('');
-}
-
-window.openProjectModal=(id)=>{
-  editingProjId=id||null;
-  const p=id?projects[id]:{};
-  document.getElementById('proj-modal-title').textContent=id?'Edit project':'Add project';
-  document.getElementById('pf-ref').value=p.ref||'';
-  document.getElementById('pf-name').value=p.name||'';
-  document.getElementById('pf-contact').value=p.contact||'';
-  document.getElementById('pf-phone').value=p.phone||'';
-  document.getElementById('pf-email').value=p.email||'';
-  document.getElementById('pf-address').value=p.address||'';
-  document.getElementById('pf-desc').value=p.desc||'';
-  document.getElementById('pf-notes').value=p.notes||'';
-  document.getElementById('proj-del-btn').style.display=id?'inline-flex':'none';
-  document.getElementById('proj-modal').style.display='flex';
-};
-window.closeProjModal=(e)=>{
-  if(!e||e.target.classList.contains('modal-overlay'))
-    document.getElementById('proj-modal').style.display='none';
-};
-window.saveProject=()=>{
-  const proj={
-    id:editingProjId||null,
-    ref:document.getElementById('pf-ref').value.trim(),
-    name:document.getElementById('pf-name').value.trim(),
-    contact:document.getElementById('pf-contact').value.trim(),
-    phone:document.getElementById('pf-phone').value.trim(),
-    email:document.getElementById('pf-email').value.trim(),
-    address:document.getElementById('pf-address').value.trim(),
-    desc:document.getElementById('pf-desc').value.trim(),
-    notes:document.getElementById('pf-notes').value.trim(),
-  };
-  if(!proj.ref&&!proj.name){alert('Please enter at least a ref or project name.');return;}
-  saveProject_db(proj);
-  document.getElementById('proj-modal').style.display='none';
-};
-window.deleteProject=()=>{
-  if(!editingProjId)return;
-  if(!confirm('Delete this project from the register?'))return;
-  deleteProject_db(editingProjId);
-  document.getElementById('proj-modal').style.display='none';
 };
 
 // expose modal toggle
