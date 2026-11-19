@@ -62,6 +62,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
 .day-cell.we{background:#a0a0a0;color:#fff}
 .day-cell.bh{background:#7e57c2;color:#fff;font-weight:600}
 .day-cell.tod{background:#E65100;color:#fff;font-weight:600}
+.day-cell.shutdown{background:#b71c1c;color:#fff;font-weight:600}
 .board-row{display:grid;align-items:stretch;border-bottom:1px solid #eee}
 .board-row:last-child{border-bottom:none}
 .row-label{padding:0 8px;font-size:11px;font-weight:600;display:flex;align-items:center;border-right:1px solid #ddd;white-space:nowrap}
@@ -72,6 +73,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
 .day-bg.bh{background:#ede7f6}
 .day-bg.tod{background:#fff3e0}
 .day-bg.abs-bg{background:#fafafa}
+.day-bg.shutdown{background:#ffcdd2}
 .day-bg.clickable{cursor:pointer}
 .day-bg.clickable:hover{filter:brightness(0.92)}
 .bar{position:absolute;top:3px;bottom:3px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;cursor:pointer;user-select:none;overflow:hidden;white-space:nowrap;transition:filter .15s}
@@ -126,6 +128,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#222;padding:0 1r
         </select>
       </div>
       <div class="form-row" id="row-project-name"><label>Project name</label><input id="f-name" type="text" placeholder="e.g. Brookwood"></div>
+      <div class="form-row" id="row-ref"><label>Ref no <span style="color:#aaa;font-weight:400">(optional)</span></label><div style="display:flex;align-items:center;gap:0"><span style="padding:5px 7px;background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:5px 0 0 5px;font-size:12px;color:#555;white-space:nowrap">HK-</span><input id="f-ref" type="text" placeholder="26-001" style="border-radius:0 5px 5px 0"></div></div>
       <div class="form-row" id="row-team"><label>Team</label><select id="f-row"></select></div>
       <div class="form-row" id="row-person" style="display:none"><label>Person</label><select id="f-person" onchange="updateAbsenceName()"></select></div>
       <div class="form-row"><label>Start date</label><input id="f-start" type="date" onchange="weeksToEnd()"></div>
@@ -235,6 +238,23 @@ const pd=s=>{const[y,m,day]=s.split('-').map(Number);return new Date(y,m-1,day);
 const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
 const diff=(a,b)=>Math.round((b-a)/86400000);
 const isBH=d=>BH[ds(d)]||null;
+
+// ── Christmas shutdown: 25 Dec → last day before first working day of new year ──
+function isShutdown(d){
+  const m=d.getMonth(),day=d.getDate(),y=d.getFullYear();
+  // Dec 25 onwards in that year
+  if(m===11&&day>=25) return true;
+  // Jan days before the first Mon-Fri non-BH of the new year
+  if(m===0){
+    // find first working day of this year
+    let check=new Date(y,0,1);
+    while(check.getDay()===0||check.getDay()===6||BH[ds(check)]){
+      check=addD(check,1);
+    }
+    if(d<check) return true;
+  }
+  return false;
+}
 
 // ── Sync status ────────────────────────────────────────────────────────────
 function setStatus(state){
@@ -418,6 +438,7 @@ function renderKey(){
     <div class="key-leg-item"><div class="key-leg-swatch" style="background:#a0a0a0"></div>Weekend</div>
     <div class="key-leg-item"><div class="key-leg-swatch" style="background:#7e57c2"></div>Bank holiday</div>
     <div class="key-leg-item"><div class="key-leg-swatch" style="background:#E65100"></div>Today</div>
+    <div class="key-leg-item"><div class="key-leg-swatch" style="background:#b71c1c"></div>Company shutdown</div>
   </div>`;
   panel.innerHTML=html;
 }
@@ -567,8 +588,8 @@ function render(){
     for(let d=1;d<=days;d++){
       const dd=new Date(year,month,d);
       const dow=['Su','Mo','Tu','We','Th','Fr','Sa'][dd.getDay()];
-      const we=dd.getDay()===0||dd.getDay()===6,tod=dd.getTime()===today.getTime(),bh=isBH(dd);
-      html+=`<div class="day-cell${we?' we':''}${bh?' bh':''}${tod?' tod':''}" title="${bh||''}">${d}<br>${dow}</div>`;
+      const we=dd.getDay()===0||dd.getDay()===6,tod=dd.getTime()===today.getTime(),bh=isBH(dd),sd=!bh&&!we&&isShutdown(dd);
+      html+=`<div class="day-cell${we?' we':''}${bh?' bh':''}${tod?' tod':''}${sd?' shutdown':''}" title="${bh||(sd?'Company shutdown':'')}">${d}<br>${dow}</div>`;
     }
     html+='</div>';
 
@@ -588,24 +609,24 @@ function render(){
         const off=diff(ms,cs),span=diff(cs,ce)+1;
         const left=off*DW+1,width=span*DW-2;
         const showLbl=(ps>=ms&&ps<=me)||off===0;
-        return`<div class="bar" title="${entry.notes||''}" style="left:${left}px;width:${width}px;${potStyle}cursor:grab" onmousedown="window.startDrag(event,'${entry.id}')"><div class="rh rl" onmousedown="window.startResize(event,'${entry.id}','left')" onclick="event.stopPropagation()"></div>${showLbl?`<span style="pointer-events:none;padding:0 5px;overflow:hidden;text-overflow:ellipsis">${entry.name}${entry.notes?' 📝':''}</span>`:''}<div class="rh rr" onmousedown="window.startResize(event,'${entry.id}','right')" onclick="event.stopPropagation()"></div></div>`;
+        const barTooltip=`${entry.ref?entry.ref+' · ':''}${entry.name}${entry.notes?' — '+entry.notes:''}`;
+        return`<div class="bar" title="${barTooltip}" style="left:${left}px;width:${width}px;${potStyle}cursor:grab" onmousedown="window.startDrag(event,'${entry.id}')"><div class="rh rl" onmousedown="window.startResize(event,'${entry.id}','left')" onclick="event.stopPropagation()"></div>${showLbl?`<span style="pointer-events:none;padding:0 5px;overflow:hidden;text-overflow:ellipsis">${entry.name}${entry.notes?' 📝':''}</span>`:''}<div class="rh rr" onmousedown="window.startResize(event,'${entry.id}','right')" onclick="event.stopPropagation()"></div></div>`;
       }
 
-      // Build segments — stop bar on Friday, restart on Monday
+      // Build segments — skip weekends, bank holidays and company shutdown days
+      const isOff=d=>d.getDay()===0||d.getDay()===6||!!isBH(d)||isShutdown(d);
       let segments=[];
       let segStart=null;
       let d=new Date(cs);
-      // If clamped start is a weekend, move to Monday
-      while(d.getDay()===0||d.getDay()===6) d=addD(d,1);
-      if(d>ce) return ''; // entire visible range is weekend
+      // If clamped start is a non-working day, move forward to first working day
+      while(isOff(d)) d=addD(d,1);
+      if(d>ce) return ''; // entire visible range is non-working
       while(d<=ce){
-        const dow=d.getDay();
-        const isWe=dow===0||dow===6;
-        if(!isWe){
+        if(!isOff(d)){
           if(!segStart)segStart=new Date(d);
           const next=addD(d,1);
-          const nextIsWe=next.getDay()===0||next.getDay()===6;
-          if(nextIsWe||d>=ce){
+          const nextIsOff=isOff(next);
+          if(nextIsOff||d>=ce){
             segments.push({start:new Date(segStart),end:new Date(d)});
             segStart=null;
           }
@@ -620,7 +641,7 @@ function render(){
         if(left<0||width<=0)return'';
         const isFirst=si===0&&(ps>=ms&&ps<=me||off===0);
         const isLast=si===segments.length-1;
-        return`<div class="bar" title="${entry.notes||''}" style="left:${left}px;width:${width}px;${potStyle}cursor:grab;border-radius:${isFirst?'3px 0 0 3px':'0'} ${isLast?'3px 3px':'0 0'} ${isLast?'3px':'0'} ${isFirst?'3px':'0'}" onmousedown="window.startDrag(event,'${entry.id}')">
+        return`<div class="bar" title="${entry.ref?entry.ref+' · ':''}${entry.name}${entry.notes?' — '+entry.notes:''}" style="left:${left}px;width:${width}px;${potStyle}cursor:grab;border-radius:${isFirst?'3px 0 0 3px':'0'} ${isLast?'3px 3px':'0 0'} ${isLast?'3px':'0'} ${isFirst?'3px':'0'}" onmousedown="window.startDrag(event,'${entry.id}')">
           <div class="rh rl" onmousedown="window.startResize(event,'${entry.id}','left')" onclick="event.stopPropagation()"></div>
           <span style="pointer-events:none;padding:0 5px;overflow:hidden;text-overflow:ellipsis">${entry.name}${entry.notes?' 📝':''}</span>
           <div class="rh rr" onmousedown="window.startResize(event,'${entry.id}','right')" onclick="event.stopPropagation()"></div>
@@ -633,9 +654,9 @@ function render(){
       for(let d=1;d<=days;d++){
         const dd=new Date(year,month,d);
         const dateStr=ds(dd);
-        const we=dd.getDay()===0||dd.getDay()===6,tod=dd.getTime()===today.getTime(),bh=isBH(dd);
+        const we=dd.getDay()===0||dd.getDay()===6,tod=dd.getTime()===today.getTime(),bh=isBH(dd),sd=!bh&&!we&&isShutdown(dd);
         const clickAttr=teamName?` onclick="window.openAddModal('${dateStr}','${teamName.replace(/'/g,"\\'")}')"`:'';
-        s+=`<div class="day-bg${extraCls?' '+extraCls:''}${we?' we':''}${bh?' bh':''}${tod?' tod':''}${teamName?' clickable':''}" style="min-height:${h}px"${clickAttr}></div>`;
+        s+=`<div class="day-bg${extraCls?' '+extraCls:''}${we?' we':''}${bh?' bh':''}${tod?' tod':''}${sd?' shutdown':''}${teamName?' clickable':''}" style="min-height:${h}px"${clickAttr}></div>`;
       }
       return s;
     }
@@ -677,15 +698,15 @@ function populateAbsRowSelect(sel){
 function addWorkingDays(start, weeks){
   const includeWeekends=document.getElementById('f-weekends')?.checked||false;
   if(includeWeekends) return addD(start,(weeks*7)-1);
+  const isOff=d=>d.getDay()===0||d.getDay()===6||!!isBH(d)||isShutdown(d);
   let days=(weeks*5)-1; // -1 because start date counts as day 1
   let current=new Date(start);
-  // If start is a weekend, move to Monday first
-  while(current.getDay()===0||current.getDay()===6) current=addD(current,1);
+  // If start is a non-working day, move forward first
+  while(isOff(current)) current=addD(current,1);
   let counted=0;
   while(counted<days){
     current=addD(current,1);
-    const dow=current.getDay();
-    if(dow!==0&&dow!==6)counted++;
+    if(!isOff(current))counted++;
   }
   return current;
 }
@@ -702,6 +723,7 @@ function toggleModalType(){
   const typeVal=document.getElementById('f-type').value;
   const isAbs=typeVal==='absence';
   document.getElementById('row-project-name').style.display=isAbs?'none':'block';
+  document.getElementById('row-ref').style.display=isAbs?'none':'block';
   document.getElementById('row-team').style.display=isAbs?'none':'block';
   document.getElementById('row-person').style.display=isAbs?'block':'none';
   document.getElementById('row-abs-row').style.display=isAbs?'block':'none';
@@ -715,6 +737,7 @@ window.openAddModal=(dateStr,teamName)=>{
   document.getElementById('modal-title').textContent='Add project or absence';
   document.getElementById('f-type').value='project';
   document.getElementById('f-name').value='';
+  document.getElementById('f-ref').value='';
   document.getElementById('f-notes').value='';
   document.getElementById('f-weeks').value='';
   document.getElementById('f-weekends').checked=false;
@@ -736,6 +759,7 @@ window.openEditModal=(id)=>{
   const isAbs=e.rowId.startsWith('absence');
   document.getElementById('f-type').value=isAbs?'absence':(e.type||'project');
   document.getElementById('f-name').value=e.name;
+  document.getElementById('f-ref').value=(e.ref||'').replace(/^HK-/,'');
   document.getElementById('f-notes').value=e.notes||'';
   document.getElementById('f-weeks').value='';
   document.getElementById('f-weekends').checked=e.includesWeekends||false;
@@ -769,7 +793,9 @@ window.saveEntry=()=>{
   }
   if(!name||!start||!end)return;
   const entryType=document.getElementById('f-type').value;
-  const entryObj={id:editingId||null,name,rowId,start,end,person,notes,includesWeekends,type:isAbs?'absence':entryType};
+  const refNum=document.getElementById('f-ref').value.trim();
+  const ref=isAbs?'':(refNum?'HK-'+refNum:'');
+  const entryObj={id:editingId||null,name,ref,rowId,start,end,person,notes,includesWeekends,type:isAbs?'absence':entryType};
   saveEntry(entryObj);
   document.getElementById('modal').style.display='none';
 };
